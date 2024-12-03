@@ -61,7 +61,7 @@ colcon build --packages-select kitti2rosbag2 --symlink-install
 #### 4. Converting to bag
 
 `
-ros2 launch kitti2rosbag2 kitti2rosbag2.launch
+ros2 launch kitti2rosbag2 kitti2rosbag2.launch.py
 `
 
 [KITTI Odometry Dataset Folder Structure](https://github.com/bharadwajsirigadi/kitti2rosbag2/wiki)
@@ -78,7 +78,7 @@ ros2 launch kitti2rosbag2 kitti2rosbag2.launch
 ## Requirements
 
 * Python 3.x
-* ROS2 installed(tested on ROS2 humble)
+* ROS2 installed (tested on ROS2 humble)
 
 ### Note
 
