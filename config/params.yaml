@@ -1,8 +1,9 @@
 kitti_rec:
   ros__parameters:
-    sequence: 2
-    data_dir: '/home/parallels/Documents/kitti_dataset/dataset'
-    odom_dir: '/home/parallels/Documents/kitti_dataset/dataset_2'
-    bag_dir : '/home/parallels/Documents/kitti_dataset/my_bag'
+    sequence: 2 # the sequence number 
+    gray_dir: '/home/valentina/Documents/LEONARDO/KITTI/Visual_Odometry/data_odometry_gray/dataset'
+    velodyne_dir: '/home/valentina/Documents/LEONARDO/KITTI/Visual_Odometry/data_odometry_velodyne/dataset'
+    odom_dir: '/home/valentina/Documents/LEONARDO/KITTI/Visual_Odometry/data_odometry_poses/dataset'
+    bag_dir : '/home/valentina/Documents/LEONARDO/KITTI/Visual_Odometry/my_bag_12'
     odom : True
   

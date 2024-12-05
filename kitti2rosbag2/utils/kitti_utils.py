@@ -6,6 +6,7 @@ import cv2
 
 DATA_EXTENSION = ".png"
 DATASET_DIR = "/media/psf/SSD/DRONES_LAB/kitti_dataset/dataset" # Fix this line
+DATASET1_DIR = "/media/psf/SSD/DRONES_LAB/kitti_dataset/dataset1" # Fix this line
 ODOM_DIR = '/media/psf/SSD/DRONES_LAB/kitti_dataset/dataset_2'  # Fix this line
 SEQUENCE = 0
 LEFT_IMG_FOLDER = "image_0"
@@ -13,15 +14,32 @@ RIGHT_IMG_FOLDER = "image_1"
 # DISTANCE = 0.54meters
 
 class KITTIOdometryDataset():
-    def __init__(self, data_dir, sequence: int, odom_dir = None,  *_, **__) -> None:
-        self.kitti_sequence_dir = os.path.join(data_dir, "sequences", f'{sequence:02d}')
+    def __init__(self, gray_dir, velodyne_dir, sequence: int, odom_dir = None,  *_, **__) -> None:
+        """Initialise Kitti dataset        
+            
+        Args:
+            gray_dir (str): The path to the gray scale Kitti Visual Odometry dataset (https://s3.eu-central-1.amazonaws.com/avg-kitti/data_odometry_gray.zip)
+            velodyne_dir (str): The path to the velodyne Kitti Visual Odometry dataset (https://s3.eu-central-1.amazonaws.com/avg-kitti/data_odometry_velodyne.zip)
+            sequence (int): the sequence number
+            odom_dir (str): The path to the ground truth poses Kitti Visual Odometry dataset (https://s3.eu-central-1.amazonaws.com/avg-kitti/data_odometry_poses.zip)
+
+        """   
+        # *** gray scale dataset ***
+        self.gray_sequence_dir = os.path.join(gray_dir, "sequences", f'{sequence:02d}')
+        self.left_cam_sequence_dir = os.path.join(self.gray_sequence_dir, LEFT_IMG_FOLDER)
+        self.right_cam_sequence_dir = os.path.join(self.gray_sequence_dir, RIGHT_IMG_FOLDER)
+        self.calib_file = os.path.join(self.gray_sequence_dir,"calib.txt")
+        self.time_file = os.path.join(self.gray_sequence_dir,"times.txt")
+        
+        # *** velodyne dataset ***
+        self.velodyne_sequence_dir = os.path.join(velodyne_dir, "sequences", f'{sequence:02d}', "velodyne")
+
+        # *** ground truth poses dataset
         if odom_dir is not None:
             self.odom_dir = os.path.join(odom_dir, 'poses', f'{sequence:02d}.txt')
-        self.left_cam_sequence_dir = os.path.join(self.kitti_sequence_dir, LEFT_IMG_FOLDER)
-        self.right_cam_sequence_dir = os.path.join(self.kitti_sequence_dir, RIGHT_IMG_FOLDER)
-        self.calib_file = os.path.join(self.kitti_sequence_dir,"calib.txt")
-        self.time_file = os.path.join(self.kitti_sequence_dir,"times.txt")
+        
 
+    # TODO: not used
     def get_files(self, extension, dir:Path):
         files = os.listdir(dir)
         filtered_files = []
@@ -31,6 +49,7 @@ class KITTIOdometryDataset():
         filtered_files.sort()
         return filtered_files
     
+    # TODO: not used
     def write_text(self, files_list, file_name):
         file_name = f"file_{file_name}.txt"
         file_path = os.path.join(self.sequence_dir, file_name)
@@ -43,13 +62,31 @@ class KITTIOdometryDataset():
             print(f"An error occurred: {e}")
         return
     
+    def point_cloud(self):
+        """ Get and read all Velodyne point cloud data.
+
+        Returns:
+            list: A list of numpy arrays where each array contains the point cloud data of a `.bin` file.
+        """
+        point_cloud_files = []
+        velodyne_files = sorted(os.listdir(self.velodyne_sequence_dir))  # Get all files in the directory, sorted
+        for filename in velodyne_files:
+            if filename.endswith('.bin'):  # Check if the file is a Velodyne `.bin` file
+                file_path = os.path.join(self.velodyne_sequence_dir, filename)
+                # Read .bin file as a numpy array (float32 format)
+                point_cloud_data = np.fromfile(file_path, dtype=np.float32).reshape(-1, 4)  
+                # Each point has (x, y, z, intensity), reshape to (N, 4)
+                point_cloud_files.append(point_cloud_data)  # Append the point cloud to the list
+        return point_cloud_files
+
+
     def left_images(self):
-        image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-        image_files = []
-        for filename in os.listdir(self.left_cam_sequence_dir):
-            if any(filename.lower().endswith(ext) for ext in image_extensions):
-                image_files.append(os.path.join(self.left_cam_sequence_dir, filename))
-        image_files = sorted(image_files)
+        image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"] # supported files extensions
+        image_files = [] # init list
+        for filename in os.listdir(self.left_cam_sequence_dir): # iterate through all files in folder
+            if any(filename.lower().endswith(ext) for ext in image_extensions): # check if file ends with any of the supported extensions
+                image_files.append(os.path.join(self.left_cam_sequence_dir, filename)) # append the file path to the list
+        image_files = sorted(image_files) # sort the list of file paths alphabetically
         return image_files
     
     def right_images(self):
@@ -76,6 +113,7 @@ class KITTIOdometryDataset():
         print(len(right_image_files))
         return left_image_files, right_image_files
     
+    # TODO: not used
     def continuous_image_reader(self, images):
         if images == "right_images":
             image_files = self.right_images()
@@ -148,7 +186,7 @@ class KITTIOdometryDataset():
         return
 
 def main():
-    kitti = KITTIOdometryDataset(DATASET_DIR, ODOM_DIR, SEQUENCE)
+    kitti = KITTIOdometryDataset(DATASET_DIR, DATASET1_DIR, ODOM_DIR, SEQUENCE)
     matrix = kitti.projection_matrix(3)
     right, left = kitti.stereo_images()
     # kitti.times_file()
