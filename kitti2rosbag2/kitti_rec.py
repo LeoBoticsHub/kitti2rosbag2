@@ -126,13 +126,16 @@ class Kitti_Odom(Node):
 
         # Retrieve and write point cloud data to the bag
         point_cloud_data = self.point_cloud[self.counter]  # Get the current frame's point cloud
-        self.rec_point_cloud(point_cloud_data, timestamp_ns)
+        #self.rec_point_cloud(point_cloud_data, timestamp_ns)
 
         # Record odometry data if enabled
         if self.odom == True:
             translation = self.ground_truth[self.counter][:3,3]
+            rot =  np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]) * self.ground_truth[self.counter][:3, :3] # [[1, 0, 0], [0, 0, 1], [0, -1, 0]]) 
             quaternion = Quaternion()
-            quaternion = quaternion.rotationmtx_to_quaternion(self.ground_truth[self.counter][:3, :3])
+            # quaternion = quaternion.rotationmtx_to_quaternion(rot)
+            quaternion = quaternion.rotation_matrix_to_quaternion(rot)           
+            quaternion = quaternion / np.linalg.norm(quaternion)
             self.rec_odom_msg(translation, quaternion, timestamp_ns)
             self.rec_odom_tf(translation, quaternion, timestamp_ns)
 
@@ -201,23 +204,15 @@ class Kitti_Odom(Node):
         odom_msg = Odometry()
         odom_msg.header.frame_id = "map"
         odom_msg.child_frame_id = "odom"
-        odom_msg.pose.pose.position.x    = -translation[0] 
-        odom_msg.pose.pose.position.y    = -translation[2] 
-        odom_msg.pose.pose.position.z    = -translation[1]
-        
-        # odom_msg.pose.pose.orientation.x = quaternion[0]
-        # odom_msg.pose.pose.orientation.y = quaternion[1]
-        # odom_msg.pose.pose.orientation.z = quaternion[2]
-        # odom_msg.pose.pose.orientation.w = quaternion[3]
 
-        # odom_msg.pose.pose.position.x    = translation[0]
-        # odom_msg.pose.pose.position.y    = translation[1] 
-        # odom_msg.pose.pose.position.z    = translation[2]
+        odom_msg.pose.pose.position.x = translation[2]
+        odom_msg.pose.pose.position.y = -translation[0]  
+        odom_msg.pose.pose.position.z = -translation[1]
         
-        odom_msg.pose.pose.orientation.x = - quaternion[2]
-        odom_msg.pose.pose.orientation.y = quaternion[0]
-        odom_msg.pose.pose.orientation.z = quaternion[1]
-        odom_msg.pose.pose.orientation.w = - quaternion[3]
+        odom_msg.pose.pose.orientation.x = quaternion[0]
+        odom_msg.pose.pose.orientation.y = quaternion[1]
+        odom_msg.pose.pose.orientation.z = quaternion[2]
+        odom_msg.pose.pose.orientation.w = quaternion[3]
 
         self.writer.write('/car/base/odom', serialize_message(odom_msg), timestamp)
         self.rec_path_msg(odom_msg, timestamp)
@@ -240,25 +235,15 @@ class Kitti_Odom(Node):
         transform.header.stamp.nanosec = timestamp % int(1e9)
 
         # Set translation and rotation
-        transform.transform.translation.x = -translation[0]
-        transform.transform.translation.y = -translation[2]
+        transform.transform.translation.x = translation[2]
+        transform.transform.translation.y = -translation[0]
         transform.transform.translation.z = -translation[1]
-        # transform.transform.rotation.x = quaternion[0]
-        # transform.transform.rotation.y = quaternion[1]
-        # transform.transform.rotation.z = quaternion[2]
-        # transform.transform.rotation.w = quaternion[3]
+
+        transform.transform.rotation.x = quaternion[0]
+        transform.transform.rotation.y = quaternion[1]
+        transform.transform.rotation.z = quaternion[2]
+        transform.transform.rotation.w = quaternion[3]
         
-
-        # transform.transform.translation.x    = translation[0]
-        # transform.transform.translation.y    = translation[1] 
-        # transform.transform.translation.z    = translation[2]
-        
-        transform.transform.rotation.x = -  quaternion[2]
-        transform.transform.rotation.y = quaternion[0]
-        transform.transform.rotation.z = quaternion[1]
-        transform.transform.rotation.w = - quaternion[3]
-
-
         # Create a TFMessage and add the TransformStamped
         tf_message = TFMessage()
         tf_message.transforms.append(transform)
